@@ -326,7 +326,7 @@ static void php_memc_get_impl(INTERNAL_FUNCTION_PARAMETERS, zend_bool by_key)
 
 	if (key_len == 0) {
 		MEMC_G(rescode) = MEMCACHED_BAD_KEY_PROVIDED;
-		RETURN_FALSE;
+		RETURN_NULL();
 	}
 
 	MEMC_METHOD_FETCH_OBJECT;
@@ -347,7 +347,7 @@ static void php_memc_get_impl(INTERNAL_FUNCTION_PARAMETERS, zend_bool by_key)
 		status = memcached_mget_by_key(i_obj->memc, server_key, server_key_len, &key, &key_len, 1);
 
 		if (php_memc_handle_error(status) < 0) {
-			RETURN_FALSE;
+			RETURN_NULL();
 		}
 
 		status = MEMCACHED_SUCCESS;
@@ -372,7 +372,7 @@ static void php_memc_get_impl(INTERNAL_FUNCTION_PARAMETERS, zend_bool by_key)
 
 			if (php_memc_handle_error(status) < 0) {
 				memcached_result_free(&result);
-				RETURN_FALSE;
+				RETURN_NULL();
 			}
 
 			/* if we have a callback, all processing is done */
@@ -389,7 +389,7 @@ static void php_memc_get_impl(INTERNAL_FUNCTION_PARAMETERS, zend_bool by_key)
 		if (php_memc_zval_from_payload(return_value, payload, payload_len, flags TSRMLS_CC) < 0) {
 			memcached_result_free(&result);
 			MEMC_G(rescode) = MEMC_RES_PAYLOAD_FAILURE;
-			RETURN_FALSE;
+			RETURN_NULL();
 		}
 
 		zval_dtor(cas_token);
@@ -433,7 +433,7 @@ static void php_memc_get_impl(INTERNAL_FUNCTION_PARAMETERS, zend_bool by_key)
 			if (payload) {
 				free(payload);
 			}
-			RETURN_FALSE;
+			RETURN_NULL();
 		}
 
 		/* payload will be NULL if the callback was invoked */
@@ -442,7 +442,7 @@ static void php_memc_get_impl(INTERNAL_FUNCTION_PARAMETERS, zend_bool by_key)
 			free(payload);
 			if (rc < 0) {
 				MEMC_G(rescode) = MEMC_RES_PAYLOAD_FAILURE;
-				RETURN_FALSE;
+				RETURN_NULL();
 			}
 		}
 
@@ -527,7 +527,7 @@ static void php_memc_getMulti_impl(INTERNAL_FUNCTION_PARAMETERS, zend_bool by_ke
 		MEMC_G(rescode) = MEMCACHED_BAD_KEY_PROVIDED;
 		efree(mkeys);
 		efree(mkeys_len);
-		RETURN_FALSE;
+		RETURN_NULL();
 	}
 
 	/*
@@ -554,7 +554,7 @@ static void php_memc_getMulti_impl(INTERNAL_FUNCTION_PARAMETERS, zend_bool by_ke
 	efree(mkeys);
 	efree(mkeys_len);
 	if (php_memc_handle_error(status) < 0) {
-		RETURN_FALSE;
+		RETURN_NULL();
 	}
 
 	/*
@@ -582,7 +582,7 @@ static void php_memc_getMulti_impl(INTERNAL_FUNCTION_PARAMETERS, zend_bool by_ke
 			zval_ptr_dtor(&value);
 			zval_dtor(return_value);
 			MEMC_G(rescode) = MEMC_RES_PAYLOAD_FAILURE;
-			RETURN_FALSE;
+			RETURN_NULL();
 		}
 
 		add_assoc_zval_ex(return_value, res_key, res_key_len+1, value);
@@ -596,7 +596,7 @@ static void php_memc_getMulti_impl(INTERNAL_FUNCTION_PARAMETERS, zend_bool by_ke
 
 	if (status != MEMCACHED_END && php_memc_handle_error(status) < 0) {
 		zval_dtor(return_value);
-		RETURN_FALSE;
+		RETURN_NULL();
 	}
 }
 /* }}} */
@@ -673,7 +673,7 @@ static void php_memc_getDelayed_impl(INTERNAL_FUNCTION_PARAMETERS, zend_bool by_
 		MEMC_G(rescode) = MEMCACHED_BAD_KEY_PROVIDED;
 		efree(mkeys);
 		efree(mkeys_len);
-		RETURN_FALSE;
+		RETURN_NULL();
 	}
 
 	/*
@@ -703,7 +703,7 @@ static void php_memc_getDelayed_impl(INTERNAL_FUNCTION_PARAMETERS, zend_bool by_
 	efree(mkeys);
 	efree(mkeys_len);
 	if (php_memc_handle_error(status) < 0) {
-		RETURN_FALSE;
+		RETURN_NULL();
 	}
 
 	if (fci.size != 0) {
@@ -727,7 +727,7 @@ static void php_memc_getDelayed_impl(INTERNAL_FUNCTION_PARAMETERS, zend_bool by_
 			status = MEMCACHED_SUCCESS;
 		}
 		if (php_memc_handle_error(status) < 0) {
-			RETURN_FALSE;
+			RETURN_NULL();
 		}
 	}
 
@@ -761,7 +761,7 @@ PHP_METHOD(Memcached, fetch)
 	if ((memcached_fetch_result(i_obj->memc, &result, &status)) == NULL) {
 		php_memc_handle_error(status TSRMLS_CC);
 		memcached_result_free(&result);
-		RETURN_FALSE;
+		RETURN_NULL();
 	}
 
 	payload     = memcached_result_value(&result);
@@ -776,7 +776,7 @@ PHP_METHOD(Memcached, fetch)
 	if (php_memc_zval_from_payload(value, payload, payload_len, flags TSRMLS_CC) < 0) {
 		zval_ptr_dtor(&value);
 		MEMC_G(rescode) = MEMC_RES_PAYLOAD_FAILURE;
-		RETURN_FALSE;
+		RETURN_NULL();
 	}
 
 	array_init(return_value);
@@ -828,7 +828,7 @@ PHP_METHOD(Memcached, fetchAll)
 			zval_ptr_dtor(&value);
 			zval_dtor(return_value);
 			MEMC_G(rescode) = MEMC_RES_PAYLOAD_FAILURE;
-			RETURN_FALSE;
+			RETURN_NULL();
 		}
 
 		MAKE_STD_ZVAL(entry);
@@ -843,7 +843,7 @@ PHP_METHOD(Memcached, fetchAll)
 
 	if (status != MEMCACHED_END && php_memc_handle_error(status) < 0) {
 		zval_dtor(return_value);
-		RETURN_FALSE;
+		RETURN_NULL();
 	}
 }
 /* }}} */
@@ -1970,7 +1970,7 @@ static int php_memc_zval_from_payload(zval *value, char *payload, size_t payload
 	if (flags & MEMC_VAL_SERIALIZED && flags & MEMC_VAL_IGBINARY) {
 #if HAVE_MEMCACHED_IGBINARY
 		if (igbinary_unserialize((uint8_t *)payload, payload_len, &value)) {
-			ZVAL_FALSE(value);
+			ZVAL_NULL(value);
 
 			if (flags & MEMC_VAL_COMPRESSED) {
 				efree(payload);
@@ -1989,7 +1989,7 @@ static int php_memc_zval_from_payload(zval *value, char *payload, size_t payload
 
 		PHP_VAR_UNSERIALIZE_INIT(var_hash);
 		if (!php_var_unserialize(&value, (const unsigned char **)&payload_tmp, payload_tmp + payload_len, &var_hash TSRMLS_CC)) {
-			ZVAL_FALSE(value);
+			ZVAL_NULL(value);
 			PHP_VAR_UNSERIALIZE_DESTROY(var_hash);
 			if (flags & MEMC_VAL_COMPRESSED) {
 				efree(payload);
