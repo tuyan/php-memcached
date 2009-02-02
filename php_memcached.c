@@ -47,6 +47,7 @@
 ****************************************/
 #define MEMC_OPT_COMPRESSION   -1001
 #define MEMC_OPT_PREFIX_KEY    -1002
+#define MEMC_OPT_SERIALIZER    -1003
 
 /****************************************
   Custom result codes
@@ -1503,6 +1504,17 @@ static PHP_METHOD(Memcached, getOption)
 			}
 		}
 
+		case MEMC_OPT_SERIALIZER:
+		{
+			switch (i_obj->serializer) {
+				case SERIALIZER_IGBINARY:
+					RETURN_STRINGL("igbinary", sizeof("igbinary")-1, 1);
+
+				default: // SERIALIZER_PHP
+					RETURN_STRINGL("php", sizeof("php")-1, 1);
+			}
+		}
+
 		case MEMCACHED_BEHAVIOR_SOCKET_SEND_SIZE:
 		case MEMCACHED_BEHAVIOR_SOCKET_RECV_SIZE:
 			if (memcached_server_count(i_obj->memc) == 0) {
@@ -1556,6 +1568,27 @@ static PHP_METHOD(Memcached, setOption)
 				php_error_docref(NULL TSRMLS_CC, E_WARNING, "bad key provided");
 				RETURN_FALSE;
 			}
+			break;
+		}
+
+		case MEMC_OPT_SERIALIZER:
+		{
+			convert_to_string(value);
+			/* igbinary serializator */
+#if HAVE_MEMCACHED_IGBINARY
+			if (strcasecmp(Z_STRVAL_P(value), "igbinary") == 0) {
+				i_obj->serializer = SERIALIZER_IGBINARY;
+			} else
+#endif
+			/* php serializator */
+			if (strcasecmp(Z_STRVAL_P(value), "php") == 0) {
+				i_obj->serializer = SERIALIZER_PHP;
+			} else {
+				php_error_docref(NULL TSRMLS_CC, E_WARNING, "invalid serializator provided");
+				RETURN_FALSE;
+			}
+			i_obj->serializer = SERIALIZER_PHP;
+
 			break;
 		}
 
@@ -2484,6 +2517,7 @@ static void php_memc_register_constants(INIT_FUNC_ARGS)
 
 	REGISTER_MEMC_CLASS_CONST_LONG(OPT_COMPRESSION, MEMC_OPT_COMPRESSION);
 	REGISTER_MEMC_CLASS_CONST_LONG(OPT_PREFIX_KEY,  MEMC_OPT_PREFIX_KEY);
+	REGISTER_MEMC_CLASS_CONST_LONG(OPT_SERIALIZER,  MEMC_OPT_SERIALIZER);
 
 	/*
 	 * libmemcached behavior options
