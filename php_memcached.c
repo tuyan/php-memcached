@@ -2647,6 +2647,19 @@ PHP_MINFO_FUNCTION(memcached)
 	php_info_print_table_row(2, "Version", PHP_MEMCACHED_VERSION);
 	php_info_print_table_row(2, "Revision", "$Revision: 1.1 $");
 	php_info_print_table_row(2, "libmemcached version", memcached_lib_version());
+
+#if HAVE_MEMCACHED_SESSION
+	php_info_print_table_row(2, "Session support", "yes");
+#else
+	php_info_print_table_row(2, "Session support ", "no");
+#endif
+
+#if HAVE_MEMCACHED_IGBINARY
+	php_info_print_table_row(2, "igbinary support", "yes");
+#else
+	php_info_print_table_row(2, "igbinary support", "no");
+#endif
+
 	php_info_print_table_end();
 }
 /* }}} */
