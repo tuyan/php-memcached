@@ -1,6 +1,6 @@
 #!/bin/sh
 
-PACKAGE=galleria
+PACKAGE=memcached
 VERSION=0
 CONFIG="--enable-memcached=shared --enable-memcached-igbinary"
 
