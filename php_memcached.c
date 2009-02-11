@@ -1880,7 +1880,6 @@ static char *php_memc_zval_to_payload(zval *value, size_t *payload_len, uint32_t
 			} else {
 #endif
 				php_serialize_data_t var_hash;
-
 				PHP_VAR_SERIALIZE_INIT(var_hash);
 				php_var_serialize(&buf, &value, &var_hash TSRMLS_CC);
 				PHP_VAR_SERIALIZE_DESTROY(var_hash);
