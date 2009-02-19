@@ -2,7 +2,7 @@
 
 PACKAGE=memcached
 VERSION=0
-CONFIG="--enable-memcached=shared --with-libmemcached-dir=/galleria/sw/libmemcached --enable-memcached-igbinary"
+CONFIG="--enable-memcached=shared --with-libmemcached-dir=/galleria/sw/libmemcached --enable-memcached-igbinary --enable-memcached-get-nulls"
 
 PHP_VERSION=5.2
 
