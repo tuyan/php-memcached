@@ -418,6 +418,7 @@ static void php_memc_get_impl(INTERNAL_FUNCTION_PARAMETERS, zend_bool by_key)
 		uint32_t dummy_flags;
 		int rc;
 		memcached_return dummy_status;
+		bool return_value_set = false;
 
 		status = memcached_mget_by_key(i_obj->memc, server_key, server_key_len, &key, &key_len, 1);
 		payload = memcached_fetch(i_obj->memc, NULL, NULL, &payload_len, &flags, &status);
@@ -428,10 +429,12 @@ static void php_memc_get_impl(INTERNAL_FUNCTION_PARAMETERS, zend_bool by_key)
 		/*
 		 * If payload wasn't found and we have a read-through callback, invoke it to get
 		 * the value. The callback will take care of storing the value back into memcache.
+		 * The callback will set the return value.
 		 */
 		if (payload == NULL && status == MEMCACHED_NOTFOUND && fci.size != 0) {
 			status = php_memc_do_cache_callback(getThis(), &fci, &fcc, key, key_len,
 												return_value TSRMLS_DC);
+			return_value_set = true;
 		}
 
 		(void)memcached_fetch(i_obj->memc, NULL, NULL, &dummy_length, &dummy_flags, &dummy_status);
@@ -443,8 +446,8 @@ static void php_memc_get_impl(INTERNAL_FUNCTION_PARAMETERS, zend_bool by_key)
 			RETURN_FROM_GET;
 		}
 
-		/* payload will be NULL if the callback was invoked */
-		if (payload != NULL) {
+		/* if memcached gave a value and there was no callback, payload may be NULL */ 
+		if (!return_value_set) {
 			rc = php_memc_zval_from_payload(return_value, payload, payload_len, flags TSRMLS_CC);
 			free(payload);
 			if (rc < 0) {
@@ -1929,8 +1932,16 @@ static char *php_memc_zval_to_payload(zval *value, size_t *payload_len, uint32_t
 
 static int php_memc_zval_from_payload(zval *value, char *payload, size_t payload_len, uint32_t flags TSRMLS_DC)
 {
-	if (payload == NULL) {
+	/*
+	   A NULL payload is completely valid if length is 0, it is simply empty.
+	 */
+	char dummy_payload[1] = { 0 };
+	if (payload == NULL && payload_len > 0) {
+		php_error_docref(NULL TSRMLS_CC, E_WARNING,
+			"Could not handle non-existing value of length %zu", payload_len);
 		return -1;
+	} else if (payload == NULL) {
+		payload = dummy_payload;
 	}
 
 	if (flags & MEMC_VAL_COMPRESSED) {
