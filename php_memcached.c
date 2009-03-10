@@ -69,6 +69,7 @@
 #define MEMC_VAL_IS_LONG       (1<<2)
 #define MEMC_VAL_IS_DOUBLE     (1<<3)
 #define MEMC_VAL_IGBINARY      (1<<4)
+#define MEMC_VAL_IS_BOOL       (1<<5)
 
 #define MEMC_COMPRESS_THRESHOLD 100
 
@@ -1864,6 +1865,8 @@ static char *php_memc_zval_to_payload(zval *value, size_t *payload_len, uint32_t
 				*flags |= MEMC_VAL_IS_LONG;
 			} else if (Z_TYPE_P(value) == IS_DOUBLE) {
 				*flags |= MEMC_VAL_IS_DOUBLE;
+			} else if (Z_TYPE_P(value) == IS_BOOL) {
+				*flags |= MEMC_VAL_IS_BOOL;
 			}
 			break;
 		}
@@ -2005,6 +2008,8 @@ static int php_memc_zval_from_payload(zval *value, char *payload, size_t payload
 		} else if (flags & MEMC_VAL_IS_DOUBLE) {
 			double dval = zend_strtod(payload, NULL);
 			ZVAL_DOUBLE(value, dval);
+		} else if (flags & MEMC_VAL_IS_BOOL) {
+			ZVAL_BOOL(value, payload_len > 0 && payload[0] == '1');
 		} else {
 			ZVAL_STRINGL(value, payload, payload_len, 1);
 		}
