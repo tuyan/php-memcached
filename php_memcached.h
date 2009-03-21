@@ -1,6 +1,6 @@
 /*
   +----------------------------------------------------------------------+
-  | Copyright (c) 2008 The PHP Group                                     |
+  | Copyright (c) 2009 The PHP Group                                     |
   +----------------------------------------------------------------------+
   | This source file is subject to version 3.0 of the PHP license,       |
   | that is bundled with this package in the file LICENSE, and is        |
@@ -53,7 +53,7 @@ PHP_MINFO_FUNCTION(memcached);
 #define PHP_MEMCACHED_VERSION "0.1.4"
 
 #ifdef ZTS
-#define MEMC_G(v) TSRMG(php_memcached_globals_id, zend_memcache_globals *, v)
+#define MEMC_G(v) TSRMG(php_memcached_globals_id, zend_php_memcache_globals *, v)
 #else
 #define MEMC_G(v) (php_memcached_globals.v)
 #endif
