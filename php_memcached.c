@@ -448,7 +448,7 @@ static void php_memc_get_impl(INTERNAL_FUNCTION_PARAMETERS, zend_bool by_key)
 			RETURN_FROM_GET;
 		}
 
-		/* if memcached gave a value and there was no callback, payload may be NULL */ 
+		/* if memcached gave a value and there was no callback, payload may be NULL */
 		if (!return_value_set) {
 			rc = php_memc_zval_from_payload(return_value, payload, payload_len, flags TSRMLS_CC);
 			free(payload);
