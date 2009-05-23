@@ -126,8 +126,8 @@ typedef struct {
 
 	memcached_st *memc;
 
-	uint8_t is_persistent;
-	uint8_t is_pristine;
+	bool is_persistent;
+	bool is_pristine;
 	const char *plist_key;
 	int plist_key_len;
 
