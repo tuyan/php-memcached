@@ -40,6 +40,7 @@
 #include <libmemcached/memcached.h>
 
 #include <zlib.h>
+#include <stdbool.h>
 
 #include "php_memcached.h"
 
@@ -53,6 +54,8 @@
 #define MEMC_OPT_COMPRESSION   -1001
 #define MEMC_OPT_PREFIX_KEY    -1002
 #define MEMC_OPT_SERIALIZER    -1003
+#define MEMC_OPT_IS_PRISTINE   -1004
+#define MEMC_OPT_IS_PERSISTENT -1005
 
 /****************************************
   Custom result codes
@@ -123,7 +126,8 @@ typedef struct {
 
 	memcached_st *memc;
 
-	unsigned is_persistent:1;
+	uint8_t is_persistent;
+	uint8_t is_pristine;
 	const char *plist_key;
 	int plist_key_len;
 
@@ -201,6 +205,7 @@ static PHP_METHOD(Memcached, __construct)
 	}
 
 	i_obj = (php_memc_t *) zend_object_store_get_object(object TSRMLS_CC);
+	i_obj->is_pristine = true;
 
 	if (persistent_id) {
 		char *plist_key = NULL;
@@ -221,6 +226,7 @@ static PHP_METHOD(Memcached, __construct)
 		 */
 		if (pi_obj) {
 			skip_ctor = 1;
+			pi_obj->is_pristine = false;
 		} else {
 			pi_obj = pecalloc(1, sizeof(*pi_obj), 1);
 
@@ -229,7 +235,8 @@ static PHP_METHOD(Memcached, __construct)
 				/* not reached */
 			}
 
-			pi_obj->is_persistent = 1;
+			pi_obj->is_persistent = true;
+			pi_obj->is_pristine = true;
 			if ((pi_obj->plist_key = pemalloc(plist_key_len + 1, 1)) == NULL) {
 				php_error_docref(NULL TSRMLS_CC, E_ERROR, "out of memory: cannot allocate handle");
 				/* not reached */
@@ -1678,6 +1685,12 @@ static PHP_METHOD(Memcached, getOption)
 	MEMC_METHOD_FETCH_OBJECT;
 
 	switch (option) {
+		case MEMC_OPT_IS_PRISTINE:
+			RETURN_BOOL(i_obj->is_pristine);
+
+		case MEMC_OPT_IS_PERSISTENT:
+			RETURN_BOOL(i_obj->is_persistent);
+			
 		case MEMC_OPT_COMPRESSION:
 			RETURN_BOOL(i_obj->compression);
 
@@ -1793,6 +1806,12 @@ static PHP_METHOD(Memcached, setOption)
 
 			break;
 		}
+
+		case MEMC_OPT_IS_PERSISTENT:
+		case MEMC_OPT_IS_PRISTINE:
+			/* read only options */
+			php_error_docref(NULL TSRMLS_CC, E_WARNING, "cannot set read only option");
+			RETURN_FALSE;
 
 		default:
 			/*
@@ -2734,9 +2753,11 @@ static void php_memc_register_constants(INIT_FUNC_ARGS)
 	 * Class options
 	 */
 
-	REGISTER_MEMC_CLASS_CONST_LONG(OPT_COMPRESSION, MEMC_OPT_COMPRESSION);
-	REGISTER_MEMC_CLASS_CONST_LONG(OPT_PREFIX_KEY,  MEMC_OPT_PREFIX_KEY);
-	REGISTER_MEMC_CLASS_CONST_LONG(OPT_SERIALIZER,  MEMC_OPT_SERIALIZER);
+	REGISTER_MEMC_CLASS_CONST_LONG(OPT_COMPRESSION,   MEMC_OPT_COMPRESSION);
+	REGISTER_MEMC_CLASS_CONST_LONG(OPT_PREFIX_KEY,    MEMC_OPT_PREFIX_KEY);
+	REGISTER_MEMC_CLASS_CONST_LONG(OPT_SERIALIZER,    MEMC_OPT_SERIALIZER);
+	REGISTER_MEMC_CLASS_CONST_LONG(OPT_IS_PRISTINE,   MEMC_OPT_IS_PRISTINE);
+	REGISTER_MEMC_CLASS_CONST_LONG(OPT_IS_PERSISTENT, MEMC_OPT_IS_PERSISTENT);
 
 	/*
 	 * libmemcached behavior options
