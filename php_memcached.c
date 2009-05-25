@@ -504,7 +504,7 @@ static void php_memc_getMulti_impl(INTERNAL_FUNCTION_PARAMETERS, zend_bool by_ke
 	zval *cas_tokens = NULL;
 	uint64_t orig_cas_flag;
 	zval *value;
-	zend_bool preserve_order = 0;  
+	zend_bool preserve_order = 0;
 	int i = 0;
 	memcached_result_st result;
 	memcached_return status = MEMCACHED_SUCCESS;
@@ -512,7 +512,7 @@ static void php_memc_getMulti_impl(INTERNAL_FUNCTION_PARAMETERS, zend_bool by_ke
 
 	if (by_key) {
 		if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sa|zb", &server_key,
-								  &server_key_len, &keys, &cas_tokens,&preserve_order) == FAILURE) {
+								  &server_key_len, &keys, &cas_tokens, &preserve_order) == FAILURE) {
 			return;
 		}
 	} else {
@@ -520,7 +520,7 @@ static void php_memc_getMulti_impl(INTERNAL_FUNCTION_PARAMETERS, zend_bool by_ke
 			return;
 		}
 	}
-    
+
 	MEMC_METHOD_FETCH_OBJECT;
 	MEMC_G(rescode) = MEMCACHED_SUCCESS;
 
@@ -589,7 +589,7 @@ static void php_memc_getMulti_impl(INTERNAL_FUNCTION_PARAMETERS, zend_bool by_ke
 		zval_dtor(cas_tokens);
 		array_init(cas_tokens);
 	}
-	
+
 	status = MEMCACHED_SUCCESS;
 	memcached_result_create(i_obj->memc, &result);
 	while ((memcached_fetch_result(i_obj->memc, &result, &status)) != NULL) {
@@ -1695,7 +1695,7 @@ static PHP_METHOD(Memcached, getOption)
 
 		case MEMC_OPT_IS_PERSISTENT:
 			RETURN_BOOL(i_obj->is_persistent);
-			
+
 		case MEMC_OPT_COMPRESSION:
 			RETURN_BOOL(i_obj->compression);
 
