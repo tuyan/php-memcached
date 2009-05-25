@@ -131,7 +131,7 @@ typedef struct {
 	const char *plist_key;
 	int plist_key_len;
 
-	unsigned compression:1;
+	bool compression;
 
 	enum memcached_serializer serializer;
 } php_memc_t;
@@ -1876,7 +1876,7 @@ zend_object_value php_memc_new(zend_class_entry *ce TSRMLS_DC)
 	zend_object_std_init( &i_obj->zo, ce TSRMLS_CC );
     zend_hash_copy(i_obj->zo.properties, &ce->default_properties, (copy_ctor_func_t) zval_add_ref, (void *) &tmp, sizeof(zval *));
 
-	i_obj->compression = 1;
+	i_obj->compression = true;
 
     retval.handle = zend_objects_store_put(i_obj, (zend_objects_store_dtor_t)zend_objects_destroy_object, (zend_objects_free_object_storage_t)php_memc_free_storage, NULL TSRMLS_CC);
     retval.handlers = zend_get_std_object_handlers();
