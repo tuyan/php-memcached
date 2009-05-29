@@ -54,8 +54,6 @@
 #define MEMC_OPT_COMPRESSION   -1001
 #define MEMC_OPT_PREFIX_KEY    -1002
 #define MEMC_OPT_SERIALIZER    -1003
-#define MEMC_OPT_IS_PRISTINE   -1004
-#define MEMC_OPT_IS_PERSISTENT -1005
 
 /****************************************
   Custom result codes
@@ -1607,6 +1605,28 @@ PHP_METHOD(Memcached, getStats)
 }
 /* }}} */
 
+/* {{{ Memcached::isPristine()
+   Returns true if this object is newly created */
+PHP_METHOD(Memcached, isPristine)
+{
+	MEMC_METHOD_INIT_VARS;
+	MEMC_METHOD_FETCH_OBJECT;
+
+	RETURN_BOOL(i_obj->is_pristine);
+}
+/* }}} */
+
+/* {{{ Memcached::isPersistent()
+   Returns true if this object is persistent */
+PHP_METHOD(Memcached, isPersistent)
+{
+	MEMC_METHOD_INIT_VARS;
+	MEMC_METHOD_FETCH_OBJECT;
+
+	RETURN_BOOL(i_obj->is_persistent);
+}
+/* }}} */
+
 /* {{{ Memcached::getVersion()
    Returns the version of each memcached server in the pool */
 PHP_METHOD(Memcached, getVersion)
@@ -1690,12 +1710,6 @@ static PHP_METHOD(Memcached, getOption)
 	MEMC_METHOD_FETCH_OBJECT;
 
 	switch (option) {
-		case MEMC_OPT_IS_PRISTINE:
-			RETURN_BOOL(i_obj->is_pristine);
-
-		case MEMC_OPT_IS_PERSISTENT:
-			RETURN_BOOL(i_obj->is_persistent);
-
 		case MEMC_OPT_COMPRESSION:
 			RETURN_BOOL(i_obj->compression);
 
@@ -1811,12 +1825,6 @@ static PHP_METHOD(Memcached, setOption)
 
 			break;
 		}
-
-		case MEMC_OPT_IS_PERSISTENT:
-		case MEMC_OPT_IS_PRISTINE:
-			/* read only options */
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "cannot set read only option");
-			RETURN_FALSE;
 
 		default:
 			/*
@@ -2658,6 +2666,12 @@ ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO(arginfo_getVersion, 0)
 ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO(arginfo_isPristine, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO(arginfo_isPersistent, 0)
+ZEND_END_ARG_INFO()
 /* }}} */
 
 /* {{{ memcached_class_methods */
@@ -2702,13 +2716,16 @@ static zend_function_entry memcached_class_methods[] = {
     MEMC_ME(getServerList,      arginfo_getServerList)
     MEMC_ME(getServerByKey,     arginfo_getServerByKey)
 
-	MEMC_ME(getStats,           arginfo_getStats)
-	MEMC_ME(getVersion,         arginfo_getVersion)
+    MEMC_ME(getStats,           arginfo_getStats)
+    MEMC_ME(getVersion,         arginfo_getVersion)
 
     MEMC_ME(flush,              arginfo_flush)
 
     MEMC_ME(getOption,          arginfo_getOption)
     MEMC_ME(setOption,          arginfo_setOption)
+
+    MEMC_ME(isPristine,         arginfo_isPristine)
+    MEMC_ME(isPersistent,       arginfo_isPersistent)
     { NULL, NULL, NULL }
 };
 #undef MEMC_ME
@@ -2763,8 +2780,6 @@ static void php_memc_register_constants(INIT_FUNC_ARGS)
 	REGISTER_MEMC_CLASS_CONST_LONG(OPT_COMPRESSION,   MEMC_OPT_COMPRESSION);
 	REGISTER_MEMC_CLASS_CONST_LONG(OPT_PREFIX_KEY,    MEMC_OPT_PREFIX_KEY);
 	REGISTER_MEMC_CLASS_CONST_LONG(OPT_SERIALIZER,    MEMC_OPT_SERIALIZER);
-	REGISTER_MEMC_CLASS_CONST_LONG(OPT_IS_PRISTINE,   MEMC_OPT_IS_PRISTINE);
-	REGISTER_MEMC_CLASS_CONST_LONG(OPT_IS_PERSISTENT, MEMC_OPT_IS_PERSISTENT);
 
 	/*
 	 * libmemcached behavior options

@@ -145,6 +145,22 @@ class Memcached {
 	
 	public function getResultCode( ) {}
 
+	public function getVersion( ) {}
+
+	/**
+	 * Tells if this object is newly created or not. This is a suitable way to
+	 * test wether the object was fetched from the persistent storage or not.
+	 *
+	 * @return boolean true if newly created, false if this is an old object from the persistent list
+	 */
+	public function isPristine( ) {}
+
+	/**
+	 * Tells if this object is persistent or not.
+	 *
+	 * @return boolean true if is persistent
+	 */
+	public function isPersistent( ) {}
 }
 
 class MemcachedException extends Exception {
