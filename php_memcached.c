@@ -113,8 +113,10 @@
 #endif
 
 #ifdef HAVE_MEMCACHED_GET_NULL
+// retur null on error
 #define RETURN_FROM_GET RETURN_NULL()
 #else
+// return false on error
 #define RETURN_FROM_GET RETURN_FALSE
 #endif
 
@@ -2874,6 +2876,19 @@ static void php_memc_register_constants(INIT_FUNC_ARGS)
 	 * Flags.
 	 */
 	REGISTER_MEMC_CLASS_CONST_LONG(GET_PRESERVE_ORDER, MEMC_GET_PRESERVE_ORDER);
+
+	/*
+	 * Returning from get on error returns either null or false, as defined at compile
+	 * time. This constant tells you which it is.
+	 */
+#ifdef HAVE_MEMCACHED_GET_NULL
+	// return null on error
+	zend_declare_class_constant_null(php_memc_get_ce(), ZEND_STRS("GET_ERROR_RETURN") - 1 TSRMLS_CC);
+#else
+	// return false on error
+	zend_declare_class_constant_bool(php_memc_get_ce(), ZEND_STRS("GET_ERROR_RETURN") - 1, false TSRMLS_CC);
+#endif
+
 
 	#undef REGISTER_MEMC_CLASS_CONST_LONG
 }

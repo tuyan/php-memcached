@@ -15,8 +15,10 @@ if (!$set || $v != 'foo') {
 sleep(3);
 $v = $m->get('will_expire');
 
-if ($v !== false) {
-	echo "Wanted a false value from get of expired value. Got:\n";
+if ($v !== Memcached::GET_ERROR_RETURN) {
+	echo "Wanted a:\n";
+	var_dump(Memcached::GET_ERROR_RETURN);
+	echo "from get of expired value. Got:\n";
 	var_dump($v);
 }
 ?>
