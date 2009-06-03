@@ -55,7 +55,6 @@ foreach ($data as $types) {
 		echo "Actual: ";
 		var_dump($actual);
 	}
-
 }
 
 ?>

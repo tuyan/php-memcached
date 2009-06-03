@@ -1,5 +1,5 @@
 --TEST--
-Memcached check preserve_order in getMulti
+Memcached GET_PRESERVE_ORDER flag in getMulti
 --SKIPIF--
 <?php if (!extension_loaded("memcached")) print "skip"; ?>
 --FILE--
@@ -22,7 +22,9 @@ foreach ($data as $k => $v) {
 }
 
 $null = null;
-$got = $m->getMulti(array_keys($data), $null, true);
+$keys = array_keys($data);
+$keys[] = 'zoo';
+$got = $m->getMulti($keys, $null, Memcached::GET_PRESERVE_ORDER);
 
 foreach ($got as $k => $v) {
 	echo "$k $v\n";
@@ -35,3 +37,4 @@ bar bar-data
 baz baz-data
 lol lol-data
 kek kek-data
+zoo
