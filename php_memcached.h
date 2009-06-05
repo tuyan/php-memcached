@@ -48,7 +48,7 @@ PHP_MINIT_FUNCTION(memcached);
 PHP_MSHUTDOWN_FUNCTION(memcached);
 PHP_MINFO_FUNCTION(memcached);
 
-#define PHP_MEMCACHED_VERSION "0.1.5"
+#define PHP_MEMCACHED_VERSION "0.2.0"
 
 #ifdef ZTS
 #define MEMC_G(v) TSRMG(php_memcached_globals_id, zend_php_memcached_globals *, v)
@@ -64,6 +64,11 @@ extern ps_module ps_mod_memcached;
 #define ps_memcached_ptr &ps_mod_memcached
 
 PS_FUNCS(memcached);
+#endif
+
+/* json serializer */
+#if (PHP_MAJOR_VERSION > 5) || (PHP_MAJOR_VERSION == 5 && PHP_MINOR_VERSION > 2) || (PHP_MAJOR_VERSION ==5 && PHP_MINOR_VERSION == 2 && PHP_RELEASE_VERSION > 9)
+#define HAVE_JSON_API 1
 #endif
 
 #endif /* PHP_MEMCACHED_H */
