@@ -31,7 +31,6 @@ extern zend_module_entry memcached_module_entry;
 #endif
 
 ZEND_BEGIN_MODULE_GLOBALS(php_memcached)
-	memcached_return rescode;
 #if HAVE_MEMCACHED_SESSION
 	short sess_locked:1;
 	char* sess_lock_key;

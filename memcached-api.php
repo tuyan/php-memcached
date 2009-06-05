@@ -145,6 +145,13 @@ class Memcached {
 	
 	public function getResultCode( ) {}
 
+	/**
+	 * Get result description from the last operation
+	 *
+	 * @return string
+	 */
+	public function getResultString( ) {}
+
 	public function getVersion( ) {}
 
 	/**
