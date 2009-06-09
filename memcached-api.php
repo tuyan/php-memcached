@@ -64,7 +64,6 @@ class Memcached {
 
 	const OPT_CACHE_LOOKUPS;
 
-
 	/**
 	 * Class options.
 	 */
@@ -72,6 +71,10 @@ class Memcached {
 
 	const OPT_PREFIX_KEY;
 
+	/**
+	 * Class constants.
+	 */
+	const GET_ERROR_RETURN;
 
 	public function __construct( $persistent_id = '' ) {}
 	

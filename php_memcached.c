@@ -22,6 +22,15 @@
  * - fix unserialize(serialize($memc))
  */
 
+/* TODO/Teddy
+ * - clean up the constructor, it is messed
+ * - a better name for "struct php_memc_internal *obj" in php_memc_t
+ * - separate persistence related functions cleanly?
+ * - Split php_memcached.h into file?
+ * - document how the persistent id should/does actually work
+ * - poking into php_memc_internal internals in php_memc_free_storage is undesirable
+ */
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -123,7 +132,7 @@
 #endif
 
 #ifdef HAVE_MEMCACHED_GET_NULL
-// retur null on error
+// return null on error
 #define RETURN_FROM_GET RETURN_NULL()
 #else
 // return false on error
@@ -148,8 +157,6 @@ typedef struct {
 	struct php_memc_internal {
 		memcached_st *memc;
 
-//		const char *plist_key;
-//		int plist_key_len;
 		bool compression;
 		bool is_persistent;
 
@@ -282,31 +289,20 @@ static PHP_METHOD(Memcached, __construct)
 	pi->compression = true;
 	pi->memc = memc;
 	pi->serializer = MEMC_G(serializer);
-//	pi->plist_key = NULL;
 	pi->is_persistent = is_persistent;
 
 	if (persistent_id) {
-//		pi->plist_key = pestrndup(plist_key, plist_key_len, 1);
-//		pi->plist_key_len = plist_key_len;
-//
-//		if (pi->plist_key == NULL) {
-//			php_error_docref(NULL TSRMLS_CC, E_ERROR, "out of memory: cannot allocate handle");
-//			/* not reached */
-//		}
-
 		zend_rsrc_list_entry le;
 
 		le.type = php_memc_list_entry();
 		le.ptr = pi;
-//		if (zend_hash_update(&EG(persistent_list), (char *)pi->plist_key,
-//							 pi->plist_key_len, (void *)&le, sizeof(le), NULL) == FAILURE) {
 		if (zend_hash_update(&EG(persistent_list), (char *)plist_key,
 							 plist_key_len, (void *)&le, sizeof(le), NULL) == FAILURE) {
 			php_error_docref(NULL TSRMLS_CC, E_ERROR, "could not register persistent entry");
 			/* not reached */
 		}
-		efree(plist_key);
 	}
+	efree(plist_key);
 }
 /* }}} */
 
@@ -1888,10 +1884,6 @@ static void php_memc_obj_free(struct php_memc_internal *pi)
 	if (pi->memc) {
 		memcached_free(pi->memc);
 	}
-
-//	if (pi->plist_key) {
-//		pefree(pi->plist_key, pi->is_persistent);
-//	}
 
 	pefree(pi, pi->is_persistent);
 }
