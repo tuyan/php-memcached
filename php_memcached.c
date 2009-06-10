@@ -49,6 +49,10 @@
 #include <ext/standard/php_smart_str.h>
 #include <ext/standard/php_var.h>
 #include <libmemcached/memcached.h>
+/* For some reason memcached version is missing in libmemcached 0.26 ?! */
+#if defined HAVE_DECL_MEMCACHED_VERSION && !HAVE_DECL_MEMCACHED_VERSION
+extern memcached_return memcached_version(memcached_st *ptr);
+#endif
 
 #include <zlib.h>
 #include <stdbool.h>
@@ -79,7 +83,7 @@
 ****************************************/
 #define MEMC_VAL_TYPE_MASK     0xf
 #define MEMC_VAL_GET_TYPE(flags)         ((flags) & MEMC_VAL_TYPE_MASK)
-#define MEMC_VAL_SET_TYPE(flags, type)   ((flags) |= ((type) & MEMC_VAL_TYPE_MASK))
+#define MEMC_VAL_SET_TYPE(flags, type)   ((flags) ^= ((flags) ^ (type)) & MEMC_VAL_TYPE_MASK)
 
 #define MEMC_VAL_IS_STRING     0
 #define MEMC_VAL_IS_LONG       1
@@ -142,11 +146,6 @@
 /****************************************
   Structures and definitions
 ****************************************/
-enum memcached_serializer {
-	SERIALIZER_PHP = 1,
-	SERIALIZER_IGBINARY = 2,
-	SERIALIZER_JSON = 3,
-};
 
 static int le_memc;
 typedef struct {
@@ -156,7 +155,8 @@ typedef struct {
 
 	struct php_memc_internal {
 		memcached_st *memc;
-		memcached_return rescode;
+		// rescode is enum mecached_return
+		int rescode;
 
 		bool compression;
 		bool is_persistent;
@@ -210,6 +210,7 @@ static void php_memc_incdec_impl(INTERNAL_FUNCTION_PARAMETERS, zend_bool incr);
 static void php_memc_getDelayed_impl(INTERNAL_FUNCTION_PARAMETERS, zend_bool by_key);
 static memcached_return php_memc_do_cache_callback(zval *memc_obj, zend_fcall_info *fci, zend_fcall_info_cache *fcc, char *key, size_t key_len, zval *value TSRMLS_DC);
 static int php_memc_do_result_callback(zval *memc_obj, zend_fcall_info *fci, zend_fcall_info_cache *fcc, memcached_result_st *result TSRMLS_DC);
+zend_object_value php_memc_new(zend_class_entry *ce TSRMLS_DC);
 
 
 /****************************************
@@ -1575,7 +1576,7 @@ PHP_METHOD(Memcached, getStats)
 	}
 
 	for (i = 0; i < servers_count; i++) {
-		hostport_len = spprintf(&hostport, 0, "%s:%d", servers[i].hostname, servers[i].port);
+		hostport_len = spprintf(&hostport, 0, "%s:%u", servers[i].hostname, (unsigned int)servers[i].port);
 
 		MAKE_STD_ZVAL(entry);
 		array_init(entry);
@@ -1667,7 +1668,7 @@ PHP_METHOD(Memcached, getVersion)
 	}
 
 	for (i = 0; i < servers_count; i++) {
-		hostport_len = spprintf(&hostport, 0, "%s:%d", servers[i].hostname, servers[i].port);
+		hostport_len = spprintf(&hostport, 0, "%s:%u", servers[i].hostname, (unsigned int)servers[i].port);
 		version_len = snprintf(version, sizeof(version), "%d.%d.%d",
 							   servers[i].major_version, servers[i].minor_version,
 							   servers[i].micro_version);
@@ -1707,7 +1708,6 @@ static PHP_METHOD(Memcached, flush)
 static PHP_METHOD(Memcached, getOption)
 {
 	long option;
-	uint64_t result;
 	memcached_behavior flag;
 	MEMC_METHOD_INIT_VARS;
 
@@ -1746,12 +1746,14 @@ static PHP_METHOD(Memcached, getOption)
 			}
 
 		default:
+		{
 			/*
 			 * Assume that it's a libmemcached behavior option.
 			 */
 			flag = (memcached_behavior) option;
-			result = memcached_behavior_get(i_obj->obj->memc, flag);
+			uint64_t result = memcached_behavior_get(i_obj->obj->memc, flag);
 			RETURN_LONG((long)result);
+		}
 	}
 }
 /* }}} */
@@ -1808,8 +1810,8 @@ static PHP_METHOD(Memcached, setOption)
 			 * (non-weighted) case. We have to clean up ourselves.
 			 */
 			if (!Z_LVAL_P(value)) {
-				i_obj->obj->memc->hash = 0;
-				i_obj->obj->memc->distribution = 0;
+				i_obj->obj->memc->hash = MEMCACHED_HASH_DEFAULT;
+				i_obj->obj->memc->distribution = MEMCACHED_DISTRIBUTION_MODULA;
 			}
 			break;
 
@@ -1817,12 +1819,12 @@ static PHP_METHOD(Memcached, setOption)
 		{
 			convert_to_long(value);
 			/* igbinary serializer */
-#if HAVE_MEMCACHED_IGBINARY
+#ifdef HAVE_MEMCACHED_IGBINARY
 			if (Z_LVAL_P(value) == SERIALIZER_IGBINARY) {
 				i_obj->obj->serializer = SERIALIZER_IGBINARY;
 			} else
 #endif
-#if HAVE_JSON_API
+#ifdef HAVE_JSON_API
 			if (Z_LVAL_P(value) == SERIALIZER_JSON) {
 				i_obj->obj->serializer = SERIALIZER_JSON;
 			} else
@@ -2016,14 +2018,14 @@ static char *php_memc_zval_to_payload(zval *value, size_t *payload_len, uint32_t
 
 		default:
 			switch (serializer) {
-#if HAVE_MEMCACHED_IGBINARY
+#ifdef HAVE_MEMCACHED_IGBINARY
 				case SERIALIZER_IGBINARY:
 					igbinary_serialize((uint8_t **) &buf.c, &buf.len, value);
 					MEMC_VAL_SET_TYPE(*flags, MEMC_VAL_IS_IGBINARY);
 					break;
 #endif
 
-#if HAVE_JSON_API
+#ifdef HAVE_JSON_API
 				case SERIALIZER_JSON:
 				{
 					php_json_encode(&buf, value TSRMLS_CC);
@@ -2062,7 +2064,7 @@ static char *php_memc_zval_to_payload(zval *value, size_t *payload_len, uint32_t
 		unsigned long payload_comp_len = buf.len + (buf.len / 500) + 25 + 1;
 		char *payload_comp = emalloc(payload_comp_len);
 
-		if (compress(payload_comp, &payload_comp_len, buf.c, buf.len) != Z_OK) {
+		if (compress((unsigned char *)payload_comp, &payload_comp_len, (unsigned char *)buf.c, buf.len) != Z_OK) {
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "could not compress value");
 			free(payload_comp);
 			smart_str_free(&buf);
@@ -2114,7 +2116,7 @@ static int php_memc_zval_from_payload(zval *value, char *payload, size_t payload
 			length = (unsigned long)payload_len * (1 << factor++);
 			buf = erealloc(buf, length + 1);
 			memset(buf, 0, length + 1);
-			status = uncompress(buf, &length, payload, payload_len);
+			status = uncompress((unsigned char *)buf, &length, (unsigned char *)payload, payload_len);
 		} while ((status==Z_BUF_ERROR) && (factor < maxfactor));
 
         payload = emalloc(length + 1);
@@ -2158,7 +2160,7 @@ static int php_memc_zval_from_payload(zval *value, char *payload, size_t payload
 			php_unserialize_data_t var_hash;
 
 			PHP_VAR_UNSERIALIZE_INIT(var_hash);
-			if (!php_var_unserialize(&value, (const unsigned char **)&payload_tmp, payload_tmp + payload_len, &var_hash TSRMLS_CC)) {
+			if (!php_var_unserialize(&value, (const unsigned char **)&payload_tmp, (unsigned char *)payload_tmp + payload_len, &var_hash TSRMLS_CC)) {
 				ZVAL_NULL(value);
 				PHP_VAR_UNSERIALIZE_DESTROY(var_hash);
 				if (flags & MEMC_VAL_COMPRESSED) {
@@ -2172,7 +2174,7 @@ static int php_memc_zval_from_payload(zval *value, char *payload, size_t payload
 		}
 
 		case MEMC_VAL_IS_IGBINARY:
-#if HAVE_MEMCACHED_IGBINARY
+#ifdef HAVE_MEMCACHED_IGBINARY
 			if (igbinary_unserialize((uint8_t *)payload, payload_len, &value)) {
 				ZVAL_FALSE(value);
 
@@ -2190,7 +2192,7 @@ static int php_memc_zval_from_payload(zval *value, char *payload, size_t payload
 			break;
 
 		case MEMC_VAL_IS_JSON:
-#if HAVE_JSON_API
+#ifdef HAVE_JSON_API
 			php_json_decode(value, payload, payload_len, 0 TSRMLS_CC);
 #else
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "could not unserialize value, no json support");
@@ -2225,7 +2227,7 @@ static void php_memc_init_globals(zend_php_memcached_globals *php_memcached_glob
 	MEMC_G(sess_lock_key) = NULL;
 	MEMC_G(sess_lock_key_len) = 0;
 #endif
-#if HAVE_MEMCACHE_IGBINARY
+#ifdef HAVE_MEMCACHE_IGBINARY
 	MEMC_G(serializer) = SERIALIZER_IGBINARY;
 #else
 	MEMC_G(serializer) = SERIALIZER_PHP;
