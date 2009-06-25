@@ -1885,9 +1885,9 @@ static PHP_METHOD(Memcached, getResultCode)
 }
 /* }}} */
 
-/* {{{ Memcached::getResultString()
-   Returns the result description from the last operation */
-static PHP_METHOD(Memcached, getResultString)
+/* {{{ Memcached::getResultMessage()
+   Returns the result message from the last operation */
+static PHP_METHOD(Memcached, getResultMessage)
 {
 	MEMC_METHOD_INIT_VARS;
 
@@ -1898,15 +1898,17 @@ static PHP_METHOD(Memcached, getResultString)
 	MEMC_METHOD_FETCH_OBJECT;
 
 	switch (i_obj->obj->rescode) {
-		// custom error
 		case MEMC_RES_PAYLOAD_FAILURE:
 			RETURN_STRING("PAYLOAD FAILURE", 1);
-		// memcached errors, lazy.. the default
+			break;
+
 		default:
 			RETURN_STRING(memcached_strerror(i_obj->obj->memc, i_obj->obj->rescode), 1);
+			break;
 	}
 }
 /* }}} */
+
 
 /****************************************
   Internal support code
@@ -2570,7 +2572,7 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO(arginfo_getResultCode, 0)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO(arginfo_getResultString, 0)
+ZEND_BEGIN_ARG_INFO(arginfo_getResultMessage, 0)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_get, 0, 0, 1)
@@ -2779,7 +2781,7 @@ static zend_function_entry memcached_class_methods[] = {
     MEMC_ME(__construct,        arginfo___construct)
 
     MEMC_ME(getResultCode,      arginfo_getResultCode)
-    MEMC_ME(getResultString,    arginfo_getResultString)
+    MEMC_ME(getResultMessage,   arginfo_getResultMessage)
 
     MEMC_ME(get,                arginfo_get)
     MEMC_ME(getByKey,           arginfo_getByKey)
