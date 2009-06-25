@@ -82,8 +82,6 @@ extern memcached_return memcached_version(memcached_st *ptr);
   Payload value flags
 ****************************************/
 #define MEMC_VAL_TYPE_MASK     0xf
-#define MEMC_VAL_GET_TYPE(flags)         ((flags) & MEMC_VAL_TYPE_MASK)
-#define MEMC_VAL_SET_TYPE(flags, type)   ((flags) ^= ((flags) ^ (type)) & MEMC_VAL_TYPE_MASK)
 
 #define MEMC_VAL_IS_STRING     0
 #define MEMC_VAL_IS_LONG       1
@@ -108,14 +106,14 @@ extern memcached_return memcached_version(memcached_st *ptr);
 ****************************************/
 #define MEMC_METHOD_INIT_VARS              \
     zval*             object  = getThis(); \
-    php_memc_t*       i_obj   = NULL;      \
+    php_memc_t*       i_obj   = NULL;
 
 #define MEMC_METHOD_FETCH_OBJECT                                               \
     i_obj = (php_memc_t *) zend_object_store_get_object( object TSRMLS_CC );   \
 	if (!i_obj->obj) {	\
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Memcached constructor was not called");	\
 		return;	\
-	} \
+	}
 
 #ifndef DVAL_TO_LVAL
 #ifdef _WIN64
@@ -183,8 +181,8 @@ static zend_class_entry *spl_ce_RuntimeException = NULL;
 const zend_fcall_info empty_fcall_info = { 0, NULL, NULL, NULL, NULL, 0, NULL, NULL, 0 };
 #undef ZEND_BEGIN_ARG_INFO_EX
 #define ZEND_BEGIN_ARG_INFO_EX(name, pass_rest_by_reference, return_reference, required_num_args)   \
-    static zend_arg_info name[] = {                                                                       \
-        { NULL, 0, NULL, 0, 0, 0, pass_rest_by_reference, return_reference, required_num_args },
+	static zend_arg_info name[] = { \
+		{ NULL, 0, NULL, 0, 0, 0, pass_rest_by_reference, return_reference, required_num_args },
 #endif
 
 ZEND_DECLARE_MODULE_GLOBALS(php_memcached)
@@ -212,6 +210,18 @@ static memcached_return php_memc_do_cache_callback(zval *memc_obj, zend_fcall_in
 static int php_memc_do_result_callback(zval *memc_obj, zend_fcall_info *fci, zend_fcall_info_cache *fcc, memcached_result_st *result TSRMLS_DC);
 zend_object_value php_memc_new(zend_class_entry *ce TSRMLS_DC);
 
+/****************************************
+  Helper functions
+****************************************/
+
+static inline int memc_val_get_type(uint32_t flags) {
+	return flags & MEMC_VAL_TYPE_MASK;
+}
+
+static inline uint32_t memc_val_set_type(uint32_t *flags, int type) {
+	*flags ^= (*flags ^ type) & MEMC_VAL_TYPE_MASK;
+	return *flags;
+}
 
 /****************************************
   Method implementations
@@ -1990,7 +2000,7 @@ static char *php_memc_zval_to_payload(zval *value, size_t *payload_len, uint32_t
 
 		case IS_STRING:
 			smart_str_appendl(&buf, Z_STRVAL_P(value), Z_STRLEN_P(value));
-			MEMC_VAL_SET_TYPE(*flags, MEMC_VAL_IS_STRING);
+			memc_val_set_type(flags, MEMC_VAL_IS_STRING);
 			break;
 
 		case IS_LONG:
@@ -2007,11 +2017,11 @@ static char *php_memc_zval_to_payload(zval *value, size_t *payload_len, uint32_t
 
 			*flags &= ~MEMC_VAL_COMPRESSED;
 			if (Z_TYPE_P(value) == IS_LONG) {
-				MEMC_VAL_SET_TYPE(*flags, MEMC_VAL_IS_LONG);
+				memc_val_set_type(flags, MEMC_VAL_IS_LONG);
 			} else if (Z_TYPE_P(value) == IS_DOUBLE) {
-				MEMC_VAL_SET_TYPE(*flags, MEMC_VAL_IS_DOUBLE);
+				memc_val_set_type(flags, MEMC_VAL_IS_DOUBLE);
 			} else if (Z_TYPE_P(value) == IS_BOOL) {
-				MEMC_VAL_SET_TYPE(*flags, MEMC_VAL_IS_BOOL);
+				memc_val_set_type(flags, MEMC_VAL_IS_BOOL);
 			}
 			break;
 		}
@@ -2021,7 +2031,7 @@ static char *php_memc_zval_to_payload(zval *value, size_t *payload_len, uint32_t
 #ifdef HAVE_MEMCACHED_IGBINARY
 				case SERIALIZER_IGBINARY:
 					igbinary_serialize((uint8_t **) &buf.c, &buf.len, value);
-					MEMC_VAL_SET_TYPE(*flags, MEMC_VAL_IS_IGBINARY);
+					memc_val_set_type(flags, MEMC_VAL_IS_IGBINARY);
 					break;
 #endif
 
@@ -2030,7 +2040,7 @@ static char *php_memc_zval_to_payload(zval *value, size_t *payload_len, uint32_t
 				{
 					php_json_encode(&buf, value TSRMLS_CC);
 					buf.c[buf.len] = 0;
-					MEMC_VAL_SET_TYPE(*flags, MEMC_VAL_IS_JSON);
+					memc_val_set_type(flags, MEMC_VAL_IS_JSON);
 					break;
 				}
 #endif
@@ -2047,7 +2057,7 @@ static char *php_memc_zval_to_payload(zval *value, size_t *payload_len, uint32_t
 						return NULL;
 					}
 
-					MEMC_VAL_SET_TYPE(*flags, MEMC_VAL_IS_SERIALIZED);
+					memc_val_set_type(flags, MEMC_VAL_IS_SERIALIZED);
 					break;
 				}
 			}
@@ -2133,8 +2143,7 @@ static int php_memc_zval_from_payload(zval *value, char *payload, size_t payload
 
 	payload[payload_len] = 0;
 
-	switch (MEMC_VAL_GET_TYPE(flags)) {
-
+	switch (memc_val_get_type(flags)) {
 		case MEMC_VAL_IS_STRING:
 			ZVAL_STRINGL(value, payload, payload_len, 1);
 			break;
