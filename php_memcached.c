@@ -1663,6 +1663,33 @@ PHP_METHOD(Memcached, getVersion)
 }
 /* }}} */
 
+/* {{{ Memcached::getKeys()
+	returns the keys defined on all the servers*/
+static memcached_return php_memc_dump_func_callback(memcached_st *ptr __attribute__((unused)), \
+	const char *key, size_t key_length, void *context)
+{
+	zval *ctx = (zval*) context;
+	add_next_index_string(ctx, (char*) key, 1);
+}
+
+PHP_METHOD(Memcached, getKeys)
+{
+	memcached_return rc;
+	memcached_dump_func callback[1];
+
+	callback[0] = &php_memc_dump_func_callback;
+	MEMC_METHOD_INIT_VARS;
+	MEMC_METHOD_FETCH_OBJECT;
+	
+	array_init(return_value);
+	rc = memcached_dump(i_obj->memc, callback, return_value, 1);
+	if (php_memc_handle_error(rc TSRMLS_CC) < 0) {
+		zval_dtor(return_value);
+		RETURN_FALSE;
+	}
+}
+/* }}} */
+
 /* {{{ Memcached::flush([ int delay ])
    Flushes the data on all the servers */
 static PHP_METHOD(Memcached, flush)
@@ -2767,6 +2794,9 @@ ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO(arginfo_getVersion, 0)
 ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO(arginfo_getKeys, 0)
+ZEND_END_ARG_INFO()
 /* }}} */
 
 /* {{{ memcached_class_methods */
@@ -2814,6 +2844,7 @@ static zend_function_entry memcached_class_methods[] = {
 
 	MEMC_ME(getStats,           arginfo_getStats)
 	MEMC_ME(getVersion,         arginfo_getVersion)
+	MEMC_ME(getKeys,            arginfo_getKeys)
 
     MEMC_ME(flush,              arginfo_flush)
 
