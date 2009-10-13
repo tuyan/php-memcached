@@ -2475,9 +2475,12 @@ PS_OPEN_FUNC(memcached)
 		memc_sess = memcached_create(NULL);
 		if (memc_sess) {
 			status = memcached_server_push(memc_sess, servers);
+			memcached_server_list_free(servers);
 
 			if (memcached_callback_set(memc_sess, MEMCACHED_CALLBACK_PREFIX_KEY, MEMC_G(sess_prefix)) ==
 				MEMCACHED_BAD_KEY_PROVIDED) {
+				PS_SET_MOD_DATA(NULL);
+				memcached_free(memc_sess);
 				return FAILURE;
 			}
 
@@ -2486,6 +2489,7 @@ PS_OPEN_FUNC(memcached)
 				return SUCCESS;
 			}
 		} else {
+			memcached_server_list_free(servers);
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "could not allocate libmemcached structure");
 		}
 	} else {
