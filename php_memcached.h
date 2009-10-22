@@ -70,6 +70,7 @@ PS_FUNCS(memcached);
 #endif
 
 /* json serializer */
+#ifdef PHP_HAVE_JSON_API
 #if (PHP_MAJOR_VERSION ==5 && PHP_MINOR_VERSION == 2 && PHP_RELEASE_VERSION > 9)
 #define HAVE_JSON_API_5_2 1
 #endif
@@ -77,6 +78,7 @@ PS_FUNCS(memcached);
 #define HAVE_JSON_API_5_3 1
 #endif
 #define HAVE_JSON_API (HAVE_JSON_API_5_2 || HAVE_JSON_API_5_3)
+#endif /* PHP_HAVE_JSON_API */
 
 #endif /* PHP_MEMCACHED_H */
 
