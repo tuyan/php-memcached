@@ -14,12 +14,16 @@
   +----------------------------------------------------------------------+
 */
 
-/* $ Id: $ */ 
+/* $ Id: $ */
 
 #ifndef PHP_MEMCACHED_H
 #define PHP_MEMCACHED_H
 
 #include <libmemcached/memcached.h>
+
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
 
 extern zend_module_entry memcached_module_entry;
 #define phpext_memcached_ptr &memcached_module_entry
@@ -30,17 +34,32 @@ extern zend_module_entry memcached_module_entry;
 #define PHP_MEMCACHED_API
 #endif
 
+/****************************************
+  Structures and definitions
+****************************************/
+enum memcached_serializer {
+	SERIALIZER_PHP = 1,
+	SERIALIZER_IGBINARY = 2,
+	SERIALIZER_JSON = 3,
+	SERIALIZER_JSON_ARRAY = 4,
+};
+
 ZEND_BEGIN_MODULE_GLOBALS(php_memcached)
-	memcached_return rescode;
 #if HAVE_MEMCACHED_SESSION
 	zend_bool sess_locking_enabled;
 	long  sess_lock_wait;
 	char* sess_prefix;
-	short sess_locked:1;
+	zend_bool sess_locked;
 	char* sess_lock_key;
 	int   sess_lock_key_len;
 #endif
-	int   serializer;
+	enum memcached_serializer serializer;
+
+	char *compression_type;
+	int   compression_type_real;
+	int   compression_threshold;
+
+	double compression_factor;
 ZEND_END_MODULE_GLOBALS(php_memcached)
 
 PHP_MEMCACHED_API zend_class_entry *php_memc_get_ce(void);
