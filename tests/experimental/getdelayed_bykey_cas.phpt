@@ -1,5 +1,5 @@
 --TEST--
-Memcached getDelayed callback
+Memcached::getDelayedByKey() with CAS
 --SKIPIF--
 <?php if (!extension_loaded("memcached")) print "skip"; ?>
 --FILE--
@@ -16,48 +16,60 @@ $data = array(
 );
 
 foreach ($data as $k => $v) {
-	$m->set($k, $v, 3600);
+	$m->setByKey('kef', $k, $v, 3600);
 }
 
 function myfunc() {
 	$datas = func_get_args();
 	if (isset($datas[1])) {
-		unset($datas[1]['cas']);
+		if (isset($datas[1]['cas']) and $datas[1]['cas'] == 0) {
+			echo "Invalid cas\n";
+		}
 		var_dump($datas[1]);
 	}
 }
 
-$m->getDelayed(array_keys($data), false, 'myfunc');
+$m->getDelayedByKey('kef', array_keys($data), true, 'myfunc');
 
 ?>
---EXPECT--
-array(2) {
+--EXPECTF--
+array(3) {
   ["key"]=>
   string(3) "foo"
   ["value"]=>
   string(8) "foo-data"
+  ["cas"]=>
+  float(%d)
 }
-array(2) {
+array(3) {
   ["key"]=>
   string(3) "bar"
   ["value"]=>
   string(8) "bar-data"
+  ["cas"]=>
+  float(%d)
 }
-array(2) {
+array(3) {
   ["key"]=>
   string(3) "baz"
   ["value"]=>
   string(8) "baz-data"
+  ["cas"]=>
+  float(%d)
 }
-array(2) {
+array(3) {
   ["key"]=>
   string(3) "lol"
   ["value"]=>
   string(8) "lol-data"
+  ["cas"]=>
+  float(%d)
 }
-array(2) {
+array(3) {
   ["key"]=>
   string(3) "kek"
   ["value"]=>
   string(8) "kek-data"
+  ["cas"]=>
+  float(%d)
 }

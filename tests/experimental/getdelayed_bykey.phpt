@@ -1,5 +1,5 @@
 --TEST--
-Memcached getDelayed callback
+Memcached::getDelayedByKey()
 --SKIPIF--
 <?php if (!extension_loaded("memcached")) print "skip"; ?>
 --FILE--
@@ -16,18 +16,22 @@ $data = array(
 );
 
 foreach ($data as $k => $v) {
-	$m->set($k, $v, 3600);
+	$m->setByKey('kef', $k, $v, 3600);
 }
 
 function myfunc() {
 	$datas = func_get_args();
 	if (isset($datas[1])) {
-		unset($datas[1]['cas']);
+		if (isset($datas[1]['cas']) and $datas[1]['cas'] == 0) {
+			echo "Invalid cas\n";
+		} else {
+			unset($datas[1]['cas']);
+		}
 		var_dump($datas[1]);
 	}
 }
 
-$m->getDelayed(array_keys($data), false, 'myfunc');
+$m->getDelayedByKey('kef', array_keys($data), false, 'myfunc');
 
 ?>
 --EXPECT--
