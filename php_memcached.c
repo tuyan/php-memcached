@@ -373,7 +373,7 @@ static void php_memc_get_impl(INTERNAL_FUNCTION_PARAMETERS, zend_bool by_key)
 	size_t payload_len = 0;
 	uint32_t flags = 0;
 	uint64_t cas = 0;
-	const char* keys[1] = { NULL };
+	char* keys[1] = { NULL };
 	size_t key_lens[1] = { 0 };
 	zval *cas_token = NULL;
 	zend_fcall_info fci = empty_fcall_info;
@@ -554,7 +554,7 @@ static void php_memc_getMulti_impl(INTERNAL_FUNCTION_PARAMETERS, zend_bool by_ke
 	zval **entry = NULL;
 	char  *payload = NULL;
 	size_t payload_len = 0;
-	const char **mkeys = NULL;
+	char **mkeys = NULL;
 	size_t *mkeys_len = NULL;
 	char *res_key = NULL;
 	size_t res_key_len = 0;
@@ -732,7 +732,7 @@ static void php_memc_getDelayed_impl(INTERNAL_FUNCTION_PARAMETERS, zend_bool by_
 	zend_bool with_cas = 0;
 	size_t num_keys = 0;
 	zval **entry = NULL;
-	const char **mkeys = NULL;
+	char **mkeys = NULL;
 	size_t *mkeys_len = NULL;
 	uint64_t orig_cas_flag;
 	zend_fcall_info fci = empty_fcall_info;
