@@ -404,7 +404,7 @@ static void php_memc_get_impl(INTERNAL_FUNCTION_PARAMETERS, zend_bool by_key)
 	size_t payload_len = 0;
 	uint32_t flags = 0;
 	uint64_t cas = 0;
-	char* keys[1] = { NULL };
+	const char* keys[1] = { NULL };
 	size_t key_lens[1] = { 0 };
 	zval *cas_token = NULL;
 	zend_fcall_info fci = empty_fcall_info;
@@ -583,7 +583,7 @@ static void php_memc_getMulti_impl(INTERNAL_FUNCTION_PARAMETERS, zend_bool by_ke
 	zval **entry = NULL;
 	char  *payload = NULL;
 	size_t payload_len = 0;
-	char **mkeys = NULL;
+	const char **mkeys = NULL;
 	size_t *mkeys_len = NULL;
 	char *res_key = NULL;
 	size_t res_key_len = 0;
@@ -631,7 +631,7 @@ static void php_memc_getMulti_impl(INTERNAL_FUNCTION_PARAMETERS, zend_bool by_ke
 			mkeys[i]     = Z_STRVAL_PP(entry);
 			mkeys_len[i] = Z_STRLEN_PP(entry);
 			if (preserve_order) {
-				add_assoc_null_ex(return_value, mkeys[i], mkeys_len[i]+1);
+				add_assoc_null_ex(return_value, (char *) mkeys[i], mkeys_len[i]+1);
 			}
 			i++;
 		}
@@ -761,7 +761,7 @@ static void php_memc_getDelayed_impl(INTERNAL_FUNCTION_PARAMETERS, zend_bool by_
 	zend_bool with_cas = 0;
 	size_t num_keys = 0;
 	zval **entry = NULL;
-	char **mkeys = NULL;
+	const char **mkeys = NULL;
 	size_t *mkeys_len = NULL;
 	uint64_t orig_cas_flag;
 	zend_fcall_info fci = empty_fcall_info;
@@ -2168,10 +2168,10 @@ static PHP_METHOD(Memcached, getResultMessage)
 				str_len = spprintf(&str, 0, "%s: %s", memcached_strerror(m_obj->memc, (memcached_return)i_obj->rescode),
 					strerror(i_obj->memc_errno));
 				RETURN_STRINGL(str, str_len, 0);
-			}
+			}	
 			/* Fall through */
 		default:
-			RETURN_STRING(memcached_strerror(m_obj->memc, (memcached_return)i_obj->rescode), 1);
+			RETURN_STRING((char *) memcached_strerror(m_obj->memc, (memcached_return) i_obj->rescode), 1);
 			break;
 	}
 
