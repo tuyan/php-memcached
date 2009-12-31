@@ -2473,7 +2473,7 @@ static int php_memc_zval_from_payload(zval *value, char *payload, size_t payload
 			"Could not handle non-existing value of length %zu", payload_len);
 		return -1;
 	} else if (payload == NULL) {
-		if (MEMC_VAL_GET_TYPE(flags) == MEMC_VAL_IS_BOOL) {
+		if (memc_val_get_type(flags) == MEMC_VAL_IS_BOOL) {
 			ZVAL_FALSE(value);
 		} else {
 			ZVAL_EMPTY_STRING(value);
@@ -2531,7 +2531,7 @@ static int php_memc_zval_from_payload(zval *value, char *payload, size_t payload
 
 	payload[payload_len] = 0;
 
-	switch (MEMC_VAL_GET_TYPE(flags)) {
+	switch (memc_val_get_type(flags)) {
 		case MEMC_VAL_IS_STRING:
 			if (payload_emalloc) {
 				ZVAL_STRINGL(value, payload, payload_len, 0);
