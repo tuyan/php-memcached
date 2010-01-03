@@ -1965,7 +1965,7 @@ static PHP_METHOD(Memcached, getOption)
 			 * Assume that it's a libmemcached behavior option.
 			 */
 			flag = (memcached_behavior) option;
-			uint64_t result = memcached_behavior_get(m_obj->memc, flag);
+			result = memcached_behavior_get(m_obj->memc, flag);
 			RETURN_LONG((long)result);
 	}
 }
