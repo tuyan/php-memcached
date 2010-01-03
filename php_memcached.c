@@ -21,15 +21,6 @@
  * - fix unserialize(serialize($memc))
  */
 
-/* TODO/Teddy
- * - clean up the constructor, it is messed
- * - a better name for "struct php_memc_internal *obj" in php_memc_t
- * - separate persistence related functions cleanly?
- * - Split php_memcached.h into file?
- * - document how the persistent id should/does actually work
- * - poking into php_memc_internal internals in php_memc_free_storage is undesirable
- */
-
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -50,16 +41,11 @@
 #include <ext/standard/php_smart_str.h>
 #include <ext/standard/php_var.h>
 #include <libmemcached/memcached.h>
-/* For some reason memcached version is missing in libmemcached 0.26 ?! */
-#if defined HAVE_DECL_MEMCACHED_VERSION && !HAVE_DECL_MEMCACHED_VERSION
-extern memcached_return memcached_version(memcached_st *ptr);
-#endif
 
 #include "php_memcached.h"
 
 #include "fastlz/fastlz.h"
 #include <zlib.h>
-#include <stdbool.h>
 
 /* Used to store the size of the block */
 #if defined(HAVE_INTTYPES_H)
@@ -121,6 +107,8 @@ typedef unsigned long int uint32_t;
   Payload value flags
 ****************************************/
 #define MEMC_VAL_TYPE_MASK     0xf
+#define MEMC_VAL_GET_TYPE(flags)         ((flags) & MEMC_VAL_TYPE_MASK)
+#define MEMC_VAL_SET_TYPE(flags, type)   ((flags) |= ((type) & MEMC_VAL_TYPE_MASK))
 
 #define MEMC_VAL_IS_STRING     0
 #define MEMC_VAL_IS_LONG       1
@@ -301,20 +289,7 @@ static void php_memc_incdec_impl(INTERNAL_FUNCTION_PARAMETERS, zend_bool incr);
 static void php_memc_getDelayed_impl(INTERNAL_FUNCTION_PARAMETERS, zend_bool by_key);
 static memcached_return php_memc_do_cache_callback(zval *memc_obj, zend_fcall_info *fci, zend_fcall_info_cache *fcc, char *key, size_t key_len, zval *value TSRMLS_DC);
 static int php_memc_do_result_callback(zval *memc_obj, zend_fcall_info *fci, zend_fcall_info_cache *fcc, memcached_result_st *result TSRMLS_DC);
-zend_object_value php_memc_new(zend_class_entry *ce TSRMLS_DC);
 
-/****************************************
-  Helper functions
-****************************************/
-
-static inline int memc_val_get_type(uint32_t flags) {
-	return flags & MEMC_VAL_TYPE_MASK;
-}
-
-static inline uint32_t memc_val_set_type(uint32_t *flags, int type) {
-	*flags ^= (*flags ^ type) & MEMC_VAL_TYPE_MASK;
-	return *flags;
-}
 
 /****************************************
   Method implementations
@@ -756,7 +731,7 @@ static void php_memc_getMulti_impl(INTERNAL_FUNCTION_PARAMETERS, zend_bool by_ke
 			ZVAL_NULL(cas_tokens);
 		}
 		zval_dtor(return_value);
-		RETURN_FROM_GET;
+		RETURN_FALSE;
 	}
 }
 /* }}} */
@@ -923,7 +898,7 @@ PHP_METHOD(Memcached, fetch)
 	if ((memcached_fetch_result(m_obj->memc, &result, &status)) == NULL) {
 		php_memc_handle_error(i_obj, status TSRMLS_CC);
 		memcached_result_free(&result);
-		RETURN_FROM_GET;
+		RETURN_FALSE;
 	}
 
 	payload     = memcached_result_value(&result);
@@ -1010,7 +985,7 @@ PHP_METHOD(Memcached, fetchAll)
 
 	if (status != MEMCACHED_END && php_memc_handle_error(i_obj, status TSRMLS_CC) < 0) {
 		zval_dtor(return_value);
-		RETURN_FROM_GET;
+		RETURN_FALSE;
 	}
 }
 /* }}} */
@@ -1944,6 +1919,7 @@ static PHP_METHOD(Memcached, flush)
 static PHP_METHOD(Memcached, getOption)
 {
 	long option;
+	uint64_t result;
 	memcached_behavior flag;
 	MEMC_METHOD_INIT_VARS;
 
@@ -1985,14 +1961,12 @@ static PHP_METHOD(Memcached, getOption)
 			}
 
 		default:
-		{
 			/*
 			 * Assume that it's a libmemcached behavior option.
 			 */
 			flag = (memcached_behavior) option;
 			uint64_t result = memcached_behavior_get(m_obj->memc, flag);
 			RETURN_LONG((long)result);
-		}
 	}
 }
 /* }}} */
@@ -2200,6 +2174,7 @@ static PHP_METHOD(Memcached, getResultMessage)
 			RETURN_STRING((char *) memcached_strerror(m_obj->memc, (memcached_return) i_obj->rescode), 1);
 			break;
 	}
+
 }
 /* }}} */
 
@@ -2335,7 +2310,7 @@ static char *php_memc_zval_to_payload(zval *value, size_t *payload_len, uint32_t
 
 		case IS_STRING:
 			smart_str_appendl(&buf, Z_STRVAL_P(value), Z_STRLEN_P(value));
-			memc_val_set_type(flags, MEMC_VAL_IS_STRING);
+			MEMC_VAL_SET_TYPE(*flags, MEMC_VAL_IS_STRING);
 			break;
 
 		case IS_LONG:
@@ -2352,11 +2327,11 @@ static char *php_memc_zval_to_payload(zval *value, size_t *payload_len, uint32_t
 
 			*flags &= ~MEMC_VAL_COMPRESSED;
 			if (Z_TYPE_P(value) == IS_LONG) {
-				memc_val_set_type(flags, MEMC_VAL_IS_LONG);
+				MEMC_VAL_SET_TYPE(*flags, MEMC_VAL_IS_LONG);
 			} else if (Z_TYPE_P(value) == IS_DOUBLE) {
-				memc_val_set_type(flags, MEMC_VAL_IS_DOUBLE);
+				MEMC_VAL_SET_TYPE(*flags, MEMC_VAL_IS_DOUBLE);
 			} else if (Z_TYPE_P(value) == IS_BOOL) {
-				memc_val_set_type(flags, MEMC_VAL_IS_BOOL);
+				MEMC_VAL_SET_TYPE(*flags, MEMC_VAL_IS_BOOL);
 			}
 			break;
 		}
@@ -2383,7 +2358,7 @@ static char *php_memc_zval_to_payload(zval *value, size_t *payload_len, uint32_t
 					php_json_encode(&buf, value, 0 TSRMLS_CC); //options
 #endif
 					buf.c[buf.len] = 0;
-					memc_val_set_type(flags, MEMC_VAL_IS_JSON);
+					MEMC_VAL_SET_TYPE(*flags, MEMC_VAL_IS_JSON);
 					break;
 				}
 #endif
@@ -2400,7 +2375,7 @@ static char *php_memc_zval_to_payload(zval *value, size_t *payload_len, uint32_t
 						return NULL;
 					}
 
-					memc_val_set_type(flags, MEMC_VAL_IS_SERIALIZED);
+					MEMC_VAL_SET_TYPE(*flags, MEMC_VAL_IS_SERIALIZED);
 					break;
 				}
 			}
@@ -3476,19 +3451,6 @@ static void php_memc_register_constants(INIT_FUNC_ARGS)
 	 * Flags.
 	 */
 	REGISTER_MEMC_CLASS_CONST_LONG(GET_PRESERVE_ORDER, MEMC_GET_PRESERVE_ORDER);
-
-	/*
-	 * Returning from get on error returns either null or false, as defined at compile
-	 * time. This constant tells you which it is.
-	 */
-#ifdef HAVE_MEMCACHED_GET_NULL
-	// return null on error
-	zend_declare_class_constant_null(php_memc_get_ce(), ZEND_STRS("GET_ERROR_RETURN") - 1 TSRMLS_CC);
-#else
-	// return false on error
-	zend_declare_class_constant_bool(php_memc_get_ce(), ZEND_STRS("GET_ERROR_RETURN") - 1, false TSRMLS_CC);
-#endif
-
 
 	#undef REGISTER_MEMC_CLASS_CONST_LONG
 

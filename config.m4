@@ -214,15 +214,6 @@ if test "$PHP_MEMCACHED" != "no"; then
     AC_MSG_RESULT([disabled])
   fi
 
-	AC_MSG_CHECKING([for get to return null if not found])
-	if test "$PHP_MEMCACHED_GET_NULLS" != "no"; then
-		AC_MSG_RESULT([enabled])
-		AC_DEFINE(HAVE_MEMCACHED_GET_NULL, 1, [Whether to return nulls on get commands if not found])
-	else
-		AC_MSG_RESULT([disabled])
-	fi
-
-  AC_MSG_CHECKING([for libmemcached location])
   if test "$PHP_LIBMEMCACHED_DIR" != "no" && test "$PHP_LIBMEMCACHED_DIR" != "yes"; then
     if test -r "$PHP_LIBMEMCACHED_DIR/include/libmemcached/memcached.h"; then
       PHP_LIBMEMCACHED_DIR="$PHP_LIBMEMCACHED_DIR"
@@ -239,9 +230,17 @@ if test "$PHP_MEMCACHED" != "no"; then
     done
   fi
 
-  dnl We're sometimes missing the definition of memcached_version?
-  AC_CHECK_DECLS([memcached_version])
+  dnl # json
+  AC_MSG_CHECKING([whether if we should enable json support])
+    json_found="no"
 
+    if test -f "$abs_srcdir/include/php/ext/json/php_json.h"; then
+      PHP_HAVE_JSON_API="yes"
+      json_found="yes"
+	fi
+  AC_MSG_RESULT([$json_found])
+
+  AC_MSG_CHECKING([for libmemcached location])
   if test "$PHP_LIBMEMCACHED_DIR" = "no"; then
     AC_MSG_ERROR([memcached support requires libmemcached. Use --with-libmemcached-dir=<DIR> to specify the prefix where libmemcached headers and library are located])
   else
