@@ -1027,11 +1027,13 @@ static void php_memc_setMulti_impl(INTERNAL_FUNCTION_PARAMETERS, zend_bool by_ke
 {
 	zval *entries;
 	char *server_key = NULL;
-	int   server_key_len = 0;
+	int server_key_len = 0;
+	int hash_type;
 	time_t expiration = 0;
 	zval **entry;
 	char *str_key;
 	uint  str_key_len;
+	char tmp[128];
 	ulong num_key;
 	char  *payload;
 	size_t payload_len;
@@ -1057,8 +1059,13 @@ static void php_memc_setMulti_impl(INTERNAL_FUNCTION_PARAMETERS, zend_bool by_ke
 		zend_hash_get_current_data(Z_ARRVAL_P(entries), (void**)&entry) == SUCCESS;
 		zend_hash_move_forward(Z_ARRVAL_P(entries))) {
 
-		if (zend_hash_get_current_key_ex(Z_ARRVAL_P(entries), &str_key, &str_key_len, &num_key, 0, NULL) != HASH_KEY_IS_STRING) {
-			continue;
+		hash_type = zend_hash_get_current_key_ex(Z_ARRVAL_P(entries), &str_key, &str_key_len, &num_key, 0, NULL);
+
+		switch(hash_type){
+			case HASH_KEY_IS_LONG:
+				str_key_len = slprintf(tmp, sizeof(tmp), "%ld", num_key) + 1;
+				str_key = tmp;
+			break;
 		}
 
 		flags = 0;
