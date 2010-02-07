@@ -1195,7 +1195,7 @@ static void php_memc_store_impl(INTERNAL_FUNCTION_PARAMETERS, int op, zend_bool 
 	if (by_key) {
 		if (op == MEMC_OP_APPEND || op == MEMC_OP_PREPEND) {
 			if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sss", &server_key,
-									  &server_key_len, &key, &key_len, &s_value, &s_value_len, &expiration) == FAILURE) {
+									  &server_key_len, &key, &key_len, &s_value, &s_value_len) == FAILURE) {
 				return;
 			}
 			INIT_ZVAL(s_zvalue);
@@ -3151,27 +3151,23 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(arginfo_append, 0, 0, 2)
 	ZEND_ARG_INFO(0, key)
 	ZEND_ARG_INFO(0, value)
-	ZEND_ARG_INFO(0, expiration)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_appendByKey, 0, 0, 3)
 	ZEND_ARG_INFO(0, server_key)
 	ZEND_ARG_INFO(0, key)
 	ZEND_ARG_INFO(0, value)
-	ZEND_ARG_INFO(0, expiration)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_prepend, 0, 0, 2)
 	ZEND_ARG_INFO(0, key)
 	ZEND_ARG_INFO(0, value)
-	ZEND_ARG_INFO(0, expiration)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_prependByKey, 0, 0, 3)
 	ZEND_ARG_INFO(0, server_key)
 	ZEND_ARG_INFO(0, key)
 	ZEND_ARG_INFO(0, value)
-	ZEND_ARG_INFO(0, expiration)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_cas, 0, 0, 3)
