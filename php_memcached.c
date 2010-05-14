@@ -446,6 +446,10 @@ static void php_memc_get_impl(INTERNAL_FUNCTION_PARAMETERS, zend_bool by_key)
 
 		status = memcached_mget_by_key(m_obj->memc, server_key, server_key_len, keys, key_lens, 1);
 
+		if (orig_cas_flag == 0) {
+			memcached_behavior_set(m_obj->memc, MEMCACHED_BEHAVIOR_SUPPORT_CAS, orig_cas_flag);
+		}
+
 		if (php_memc_handle_error(i_obj, status TSRMLS_CC) < 0) {
 			RETURN_FROM_GET;
 		}
@@ -497,12 +501,6 @@ static void php_memc_get_impl(INTERNAL_FUNCTION_PARAMETERS, zend_bool by_key)
 
 		memcached_result_free(&result);
 
-		/*
-		 * Restore the CAS support flag, but only if we had to turn it on.
-		 */
-		if (orig_cas_flag == 0) {
-			memcached_behavior_set(m_obj->memc, MEMCACHED_BEHAVIOR_SUPPORT_CAS, orig_cas_flag);
-		}
 		return;
 
 	} else {
@@ -665,10 +663,8 @@ static void php_memc_getMulti_impl(INTERNAL_FUNCTION_PARAMETERS, zend_bool by_ke
 	/*
 	 * Restore the CAS support flag, but only if we had to turn it on.
 	 */
-	if (cas_tokens) {
-		if (orig_cas_flag == 0) {
-			memcached_behavior_set(m_obj->memc, MEMCACHED_BEHAVIOR_SUPPORT_CAS, orig_cas_flag);
-		}
+	if (cas_tokens && orig_cas_flag == 0) {
+		memcached_behavior_set(m_obj->memc, MEMCACHED_BEHAVIOR_SUPPORT_CAS, orig_cas_flag);
 	}
 
 	efree(mkeys);
@@ -839,10 +835,8 @@ static void php_memc_getDelayed_impl(INTERNAL_FUNCTION_PARAMETERS, zend_bool by_
 	/*
 	 * Restore the CAS support flag, but only if we had to turn it on.
 	 */
-	if (with_cas) {
-		if (orig_cas_flag == 0) {
-			memcached_behavior_set(m_obj->memc, MEMCACHED_BEHAVIOR_SUPPORT_CAS, orig_cas_flag);
-		}
+	if (with_cas && orig_cas_flag == 0) {
+		memcached_behavior_set(m_obj->memc, MEMCACHED_BEHAVIOR_SUPPORT_CAS, orig_cas_flag);
 	}
 
 	efree(mkeys);
@@ -1197,7 +1191,7 @@ static void php_memc_store_impl(INTERNAL_FUNCTION_PARAMETERS, int op, zend_bool 
 	if (by_key) {
 		if (op == MEMC_OP_APPEND || op == MEMC_OP_PREPEND) {
 			if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sss", &server_key,
-									  &server_key_len, &key, &key_len, &s_value, &s_value_len, &expiration) == FAILURE) {
+									  &server_key_len, &key, &key_len, &s_value, &s_value_len) == FAILURE) {
 				return;
 			}
 			INIT_ZVAL(s_zvalue);
@@ -2067,8 +2061,14 @@ static int php_memc_set_option(php_memc_t *i_obj, long option, zval *value TSRML
 			 * (non-weighted) case. We have to clean up ourselves.
 			 */
 			if (!Z_LVAL_P(value)) {
+#if defined(LIBMEMCACHED_VERSION_HEX) && LIBMEMCACHED_VERSION_HEX > 0x00037000
+			(void)memcached_behavior_set_key_hash(m_obj->memc, MEMCACHED_HASH_DEFAULT);
+			(void)memcached_behavior_set_distribution_hash(m_obj->memc, MEMCACHED_HASH_DEFAULT);
+			(void)memcached_behavior_set_distribution(m_obj->memc, MEMCACHED_DISTRIBUTION_MODULA);
+#else
 				m_obj->memc->hash = 0;
 				m_obj->memc->distribution = 0;
+#endif
 			}
 			break;
 
@@ -2144,9 +2144,15 @@ static PHP_METHOD(Memcached, setOptions)
 		 zend_hash_move_forward(Z_ARRVAL_P(options))) {
 
 		if (zend_hash_get_current_key_ex(Z_ARRVAL_P(options), &key, &key_len, &key_index, 0, NULL) == HASH_KEY_IS_LONG) {
-			if (!php_memc_set_option(i_obj, (long) key_index, *value TSRMLS_CC)) {
+			zval copy = **value;
+			zval_copy_ctor(&copy);
+			INIT_PZVAL(&copy);
+
+			if (!php_memc_set_option(i_obj, (long) key_index, &copy TSRMLS_CC)) {
 				ok = 0;
 			}
+
+			zval_dtor(&copy);
 		} else {
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "invalid configuration option");
 			ok = 0;
@@ -3147,27 +3153,23 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(arginfo_append, 0, 0, 2)
 	ZEND_ARG_INFO(0, key)
 	ZEND_ARG_INFO(0, value)
-	ZEND_ARG_INFO(0, expiration)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_appendByKey, 0, 0, 3)
 	ZEND_ARG_INFO(0, server_key)
 	ZEND_ARG_INFO(0, key)
 	ZEND_ARG_INFO(0, value)
-	ZEND_ARG_INFO(0, expiration)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_prepend, 0, 0, 2)
 	ZEND_ARG_INFO(0, key)
 	ZEND_ARG_INFO(0, value)
-	ZEND_ARG_INFO(0, expiration)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_prependByKey, 0, 0, 3)
 	ZEND_ARG_INFO(0, server_key)
 	ZEND_ARG_INFO(0, key)
 	ZEND_ARG_INFO(0, value)
-	ZEND_ARG_INFO(0, expiration)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_cas, 0, 0, 3)

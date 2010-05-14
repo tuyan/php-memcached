@@ -32,6 +32,7 @@ echo "delete: ";
 var_dump($m->deleteMulti(array_keys($data)));
 echo "Should be empty / not found: ";
 var_dump($m->getMulti($str_keys));
+var_dump($m->deleteMulti(array(false)));
 
 --EXPECTF--
 set: bool(true)
@@ -52,4 +53,6 @@ delete: array(7) {
   int(%d)
 }
 Should be empty / not found: array(0) {
+}
+array(0) {
 }
